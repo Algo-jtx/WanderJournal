@@ -166,10 +166,18 @@ function Journal() {
             <div className="journal-cover-color journal-cover-color-two" />
 
             <div className="journal-cover-photo">
-              <div className="journal-cover-placeholder">
-                <span>{journal.location.city}</span>
-                <small>cover photograph</small>
-              </div>
+              {journal.coverImage ? (
+                <img
+                  src={journal.coverImage}
+                  alt={`${journal.title} cover`}
+                  className="journal-cover-image"
+                />
+              ) : (
+                <div className="journal-cover-placeholder">
+                  <span>{journal.location.city}</span>
+                  <small>cover photograph</small>
+                </div>
+              )}
             </div>
 
             <div className="journal-cover-note">

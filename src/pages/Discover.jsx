@@ -96,15 +96,23 @@ function Discover() {
                 <div className="journal-card-color" />
 
                 <div className="journal-photo-wrap">
-                  <div className="journal-photo-placeholder">
-                    <span className="journal-photo-place">
-                      {journal.location.city}
-                    </span>
+                  {journal.coverImage ? (
+                    <img
+                      src={journal.coverImage}
+                      alt={`${journal.title} cover`}
+                      className="journal-cover-image"
+                    />
+                  ) : (
+                    <div className="journal-photo-placeholder">
+                      <span className="journal-photo-place">
+                        {journal.location.city}
+                      </span>
 
-                    <span className="journal-photo-hint">
-                      cover photograph
-                    </span>
-                  </div>
+                      <span className="journal-photo-hint">
+                        cover photograph
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="journal-card-content">

@@ -190,18 +190,11 @@ function ReadPage() {
             <section className="entry-media-clean">
               {page.image ? (
                 <div className="entry-photo-clean">
-                  {page.cloud ? (
-                    <img
-                      src={page.image}
-                      alt={page.title || "Journal page"}
-                      className="entry-real-image"
-                    />
-                  ) : (
-                    <div className="entry-photo-placeholder">
-                      <span>{page.city}</span>
-                      <small>page photograph</small>
-                    </div>
-                  )}
+                  <img
+                    src={page.image}
+                    alt={page.title || "Journal page"}
+                    className="entry-real-image"
+                  />
                 </div>
               ) : (
                 <div className="entry-text-poster">
