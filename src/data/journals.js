@@ -16,7 +16,7 @@ const journals = [
         country: "Japan",
       },
     ],
-    pages: 7,
+    pages: 2,
   },
 
   {
@@ -36,7 +36,7 @@ const journals = [
         country: "Kenya",
       },
     ],
-    pages: 4,
+    pages: 2,
   },
 
   {
@@ -56,7 +56,7 @@ const journals = [
         country: "South Korea",
       },
     ],
-    pages: 5,
+    pages: 2,
   },
 
   {
@@ -76,12 +76,12 @@ const journals = [
         country: "Kenya",
       },
     ],
-    pages: 6,
+    pages: 2,
   },
 
   {
     id: "things-growing",
-    title: "Things Growing",
+    title: "Nature",
     theme: "nature",
     description:
       "Plants, landscapes, weather, and small pieces of the natural world.",
@@ -96,7 +96,7 @@ const journals = [
         country: "Rwanda",
       },
     ],
-    pages: 5,
+    pages: 2,
   },
 
   {
@@ -116,7 +116,7 @@ const journals = [
         country: "Nigeria",
       },
     ],
-    pages: 3,
+    pages: 2,
   },
 ];
 
