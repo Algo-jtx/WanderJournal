@@ -1,10 +1,36 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import journals from "../data/journals";
 import pages from "../data/pages";
 import themes from "../data/themes";
+import { getJournalBySlug } from "../services/journalService";
+import { getCloudPagesForJournal } from "../services/pageService";
 
 function Journal() {
   const { journalId } = useParams();
+
+  const [cloudPages, setCloudPages] = useState([]);
+
+  useEffect(() => {
+    getJournalBySlug(journalId)
+      .then(({ data, error }) => {
+        if (error || !data) {
+          return null;
+        }
+
+        return getCloudPagesForJournal(data.id);
+      })
+      .then((result) => {
+        if (!result || result.error) {
+          return;
+        }
+
+        setCloudPages(result.data || []);
+      })
+      .catch((error) => {
+        console.error("Cloud page loading failed:", error);
+      });
+  }, [journalId]);
 
   const journal = journals.find((item) => item.id === journalId);
 
@@ -30,6 +56,26 @@ function Journal() {
   const [color1, color2, color3] = theme.colors;
 
   const firstPage = journalPages[0];
+
+  const allPages = [
+    ...journalPages,
+    ...cloudPages.map((page) => ({
+      id: page.id,
+      journalId: journal.id,
+      pageNumber:
+        page.page_number ||
+        journalPages.length + 1,
+      city: page.city,
+      country: page.country,
+      contributor: page.author_name,
+      title: page.title,
+      text: page.body,
+      image: page.image_url,
+      voice: page.audio_url,
+      originalLanguage: page.original_language,
+      cloud: true,
+    })),
+  ];
 
   return (
     <div
@@ -82,7 +128,7 @@ function Journal() {
 
               <div>
                 <span className="meta-label">Pages</span>
-                <strong>{journal.pages}</strong>
+                <strong>{allPages.length}</strong>
               </div>
 
               <div>
@@ -178,7 +224,7 @@ function Journal() {
           </div>
 
           <div className="journal-page-list">
-            {journalPages.map((page) => (
+            {allPages.map((page) => (
               <Link
                 key={page.id}
                 to={`/journal/${journal.id}/page/${page.id}`}

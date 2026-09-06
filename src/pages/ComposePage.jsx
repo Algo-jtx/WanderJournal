@@ -5,15 +5,30 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+
 import journals from "../data/journals";
 import themes from "../data/themes";
+
+import { useAuth } from "../context/AuthContext";
+
+import {
+  addCloudPage,
+  addJourneyStop,
+  getCloudPagesForJournal,
+} from "../services/pageService";
+
+import { getJournalBySlug } from "../services/journalService";
+import { uploadJournalImage } from "../services/storageService";
 
 function ComposePage() {
   const { journalId } = useParams();
   const locationState = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const journal = journals.find((item) => item.id === journalId);
+  const journal = journals.find(
+    (item) => item.id === journalId
+  );
 
   const formats = locationState.state?.formats || {
     photo: true,
@@ -31,7 +46,11 @@ function ComposePage() {
   });
 
   const [photoName, setPhotoName] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
   const [audioName, setAudioName] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   if (!journal) {
     return null;
@@ -54,6 +73,7 @@ function ComposePage() {
 
     if (file) {
       setPhotoName(file.name);
+      setPhotoFile(file);
     }
   }
 
@@ -68,36 +88,121 @@ function ComposePage() {
   function handleSave(event) {
     event.preventDefault();
 
-    const contribution = {
-      id: `local-${Date.now()}`,
-      journalId: journal.id,
-      title: form.title || "An untitled page",
-      story: form.story,
-      city: form.city || "Somewhere",
-      country: form.country || "",
-      contributor: form.contributor || "Someone",
-      language: form.language,
-      formats,
-      photoName,
-      audioName,
-      createdAt: new Date().toISOString(),
-    };
+    setSaving(true);
+    setSaveError("");
 
-    const existing = JSON.parse(
-      localStorage.getItem("wanderjournal-pages") || "[]"
-    );
+    let cloudJournal;
 
-    localStorage.setItem(
-      "wanderjournal-pages",
-      JSON.stringify([...existing, contribution])
-    );
+    getJournalBySlug(journal.id)
+      .then(({ data, error }) => {
+        if (error) {
+          throw error;
+        }
 
-    localStorage.setItem(
-      "wanderjournal-last-page",
-      JSON.stringify(contribution)
-    );
+        cloudJournal = data;
 
-    navigate(`/journal/${journal.id}/pass`);
+        return getCloudPagesForJournal(cloudJournal.id);
+      })
+      .then(({ data, error }) => {
+        if (error) {
+          throw error;
+        }
+
+        const existingCloudPages = data || [];
+
+        const pageNumber =
+          journal.pages + existingCloudPages.length + 1;
+
+        if (formats.photo && photoFile) {
+          return uploadJournalImage(photoFile, user.id)
+            .then(({ data: uploadData, error: uploadError }) => {
+              if (uploadError) {
+                throw uploadError;
+              }
+
+              return addCloudPage({
+                journalId: cloudJournal.id,
+                userId: user.id,
+
+                authorName:
+                  form.contributor ||
+                  user.email?.split("@")[0] ||
+                  "Anonymous traveler",
+
+                title: form.title,
+                body: formats.writing ? form.story : null,
+
+                originalLanguage: form.language,
+
+                city: form.city,
+                country: form.country,
+
+                pageNumber,
+                imageUrl: uploadData.publicUrl,
+              });
+            });
+        }
+
+        return addCloudPage({
+          journalId: cloudJournal.id,
+          userId: user.id,
+
+          authorName:
+            form.contributor ||
+            user.email?.split("@")[0] ||
+            "Anonymous traveler",
+
+          title: form.title,
+          body: formats.writing ? form.story : null,
+
+          originalLanguage: form.language,
+
+          city: form.city,
+          country: form.country,
+
+          pageNumber,
+          imageUrl: null,
+        });
+      })
+      .then(({ data, error }) => {
+        if (error) {
+          throw error;
+        }
+
+        const createdPage = data;
+
+        return addJourneyStop({
+          journalId: cloudJournal.id,
+          pageId: createdPage.id,
+          userId: user.id,
+          city: createdPage.city,
+          country: createdPage.country,
+        }).then(({ error: journeyError }) => {
+          if (journeyError) {
+            throw journeyError;
+          }
+
+          return createdPage;
+        });
+      })
+      .then((createdPage) => {
+        sessionStorage.setItem(
+          "wanderjournal-last-page",
+          JSON.stringify(createdPage)
+        );
+
+        navigate(`/journal/${journal.id}/pass`);
+      })
+      .catch((error) => {
+        console.error(error);
+
+        setSaveError(
+          error.message ||
+          "Something went wrong while leaving your page."
+        );
+
+        setSaving(false);
+      });
   }
 
   return (
@@ -138,13 +243,14 @@ function ComposePage() {
               <h2>Make it yours.</h2>
 
               <p>
-                The layout stays simple. What you leave behind gives
-                the page its character.
+                The layout stays simple. What you leave behind
+                gives the page its character.
               </p>
             </div>
 
             <label className="composer-field">
               <span>Your name or nickname</span>
+
               <input
                 name="contributor"
                 value={form.contributor}
@@ -154,25 +260,31 @@ function ComposePage() {
             </label>
 
             <div className="composer-field-row">
+
               <label className="composer-field">
                 <span>From</span>
+
                 <input
                   name="city"
                   value={form.city}
                   onChange={handleChange}
                   placeholder="City"
+                  required
                 />
               </label>
 
               <label className="composer-field">
                 <span>Country</span>
+
                 <input
                   name="country"
                   value={form.country}
                   onChange={handleChange}
                   placeholder="Country"
+                  required
                 />
               </label>
+
             </div>
 
             <label className="composer-field">
@@ -196,11 +308,13 @@ function ComposePage() {
 
             <label className="composer-field">
               <span>Page title</span>
+
               <input
                 name="title"
                 value={form.title}
                 onChange={handleChange}
                 placeholder="What are you leaving here?"
+                required
               />
             </label>
 
@@ -220,7 +334,9 @@ function ComposePage() {
 
             {formats.photo && (
               <label className="upload-field">
-                <span className="eyebrow">Photo</span>
+                <span className="eyebrow">
+                  Photo
+                </span>
 
                 <input
                   type="file"
@@ -231,12 +347,18 @@ function ComposePage() {
                 <strong>
                   {photoName || "Choose a photograph"}
                 </strong>
+
+                <small>
+                  Cloud image uploads are the next step.
+                </small>
               </label>
             )}
 
             {formats.voice && (
               <label className="upload-field">
-                <span className="eyebrow">Voice</span>
+                <span className="eyebrow">
+                  Voice
+                </span>
 
                 <input
                   type="file"
@@ -249,13 +371,25 @@ function ComposePage() {
                 </strong>
 
                 <small>
-                  Google AI can later transcribe and translate this.
+                  Voice storage and transcription come after images.
                 </small>
               </label>
             )}
 
-            <button type="submit" className="button">
-              Leave it here →
+            {saveError && (
+              <p className="auth-status">
+                {saveError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="button"
+              disabled={saving}
+            >
+              {saving
+                ? "Leaving your page..."
+                : "Leave it here →"}
             </button>
           </form>
 
@@ -265,6 +399,7 @@ function ComposePage() {
             <div className="preview-color preview-color-two" />
 
             <div className="preview-paper">
+
               <p className="eyebrow">
                 {form.city || "Your city"}
               </p>
@@ -295,8 +430,8 @@ function ComposePage() {
               <p className="annotation preview-note">
                 left by {form.contributor || "someone"} ↗
               </p>
-            </div>
 
+            </div>
           </aside>
 
         </section>

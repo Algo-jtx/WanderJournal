@@ -1,11 +1,16 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import journals from "../data/journals";
 import pages from "../data/pages";
 import themes from "../data/themes";
 import TranslationBar from "../components/shared/TranslationBar";
+import { getCloudPage } from "../services/pageService";
 
 function ReadPage() {
   const { journalId, pageId } = useParams();
+
+  const [cloudPage, setCloudPage] = useState(null);
+  const [cloudLoading, setCloudLoading] = useState(false);
 
   const journal = journals.find((item) => item.id === journalId);
 
@@ -17,7 +22,55 @@ function ReadPage() {
     (item) => item.id === pageId
   );
 
-  const page = journalPages[pageIndex];
+  const localPage = journalPages[pageIndex];
+
+  useEffect(() => {
+    if (localPage) {
+      setCloudPage(null);
+      return;
+    }
+
+    setCloudLoading(true);
+
+    getCloudPage(pageId)
+      .then(({ data, error }) => {
+        if (error) {
+          setCloudPage(null);
+          return;
+        }
+
+        setCloudPage({
+          id: data.id,
+          journalId,
+          pageNumber: data.page_number,
+          city: data.city,
+          country: data.country,
+          contributor: data.author_name,
+          title: data.title,
+          text: data.body,
+          image: data.image_url,
+          voice: data.audio_url,
+          originalLanguage: data.original_language,
+          annotation: data.annotation,
+          music: data.music,
+          cloud: true,
+        });
+      })
+      .finally(() => {
+        setCloudLoading(false);
+      });
+  }, [pageId, localPage, journalId]);
+
+  const page = localPage || cloudPage;
+
+  if (cloudLoading) {
+    return (
+      <div className="auth-loading">
+        <p className="eyebrow">WanderJournal</p>
+        <p>Opening this page...</p>
+      </div>
+    );
+  }
 
   if (!journal || !page) {
     return (
@@ -137,10 +190,18 @@ function ReadPage() {
             <section className="entry-media-clean">
               {page.image ? (
                 <div className="entry-photo-clean">
-                  <div className="entry-photo-placeholder">
-                    <span>{page.city}</span>
-                    <small>page photograph</small>
-                  </div>
+                  {page.cloud ? (
+                    <img
+                      src={page.image}
+                      alt={page.title || "Journal page"}
+                      className="entry-real-image"
+                    />
+                  ) : (
+                    <div className="entry-photo-placeholder">
+                      <span>{page.city}</span>
+                      <small>page photograph</small>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="entry-text-poster">
