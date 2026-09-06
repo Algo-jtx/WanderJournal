@@ -17,18 +17,45 @@ const languages = [
 function TranslationBar({ page }) {
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [translation, setTranslation] = useState(null);
+  const [showTranslation, setShowTranslation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  function getCacheKey(language) {
+    const pageKey =
+      page.id ||
+      `${page.title || "page"}-${page.text || ""}`.slice(0, 120);
+
+    return `wanderjournal-translation:${pageKey}:${language}`;
+  }
+
   function handleLanguageChange(event) {
-    setTargetLanguage(event.target.value);
+    const language = event.target.value;
+
+    setTargetLanguage(language);
+    setTranslation(null);
+    setShowTranslation(false);
     setError("");
   }
 
   function handleTranslate() {
+    const cacheKey = getCacheKey(targetLanguage);
+
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+
+      if (cached) {
+        setTranslation(JSON.parse(cached));
+        setShowTranslation(true);
+        setError("");
+        return;
+      }
+    } catch (cacheError) {
+      console.warn("Translation cache unavailable:", cacheError);
+    }
+
     setLoading(true);
     setError("");
-    setTranslation(null);
 
     translatePage({
       title: page.title || "",
@@ -38,6 +65,19 @@ function TranslationBar({ page }) {
     })
       .then((result) => {
         setTranslation(result);
+        setShowTranslation(true);
+
+        try {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify(result)
+          );
+        } catch (cacheError) {
+          console.warn(
+            "Could not save translation cache:",
+            cacheError
+          );
+        }
       })
       .catch((err) => {
         console.error("Translation failed:", err);
@@ -53,8 +93,14 @@ function TranslationBar({ page }) {
   }
 
   function handleShowOriginal() {
-    setTranslation(null);
+    setShowTranslation(false);
     setError("");
+  }
+
+  function handleShowTranslation() {
+    if (translation) {
+      setShowTranslation(true);
+    }
   }
 
   return (
@@ -102,16 +148,28 @@ function TranslationBar({ page }) {
         >
           {loading
             ? "Crossing languages..."
-            : "Translate with Google AI"}
+            : translation
+              ? "Translate again"
+              : "Translate with Google AI"}
         </button>
 
-        {translation && (
+        {translation && showTranslation && (
           <button
             type="button"
             className="language-button"
             onClick={handleShowOriginal}
           >
             Show original
+          </button>
+        )}
+
+        {translation && !showTranslation && (
+          <button
+            type="button"
+            className="language-button"
+            onClick={handleShowTranslation}
+          >
+            Show translation
           </button>
         )}
       </div>
@@ -122,7 +180,7 @@ function TranslationBar({ page }) {
         </p>
       )}
 
-      {translation && (
+      {translation && showTranslation && (
         <div className="translation-result">
           <div className="translation-meta">
             <span>
@@ -166,6 +224,13 @@ function TranslationBar({ page }) {
             The contributor's original page remains unchanged.
           </p>
         </div>
+      )}
+
+      {translation && !showTranslation && (
+        <p className="language-status">
+          Showing the contributor's original page.
+          Your {targetLanguage} translation is ready whenever you want it.
+        </p>
       )}
     </section>
   );
