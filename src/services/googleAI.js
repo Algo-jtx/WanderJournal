@@ -1,18 +1,29 @@
-const GOOGLE_AI_ENDPOINT = "/api/google-ai";
+import { supabase } from "../lib/supabase";
 
-export function translatePageContent(payload) {
-  return fetch(`${GOOGLE_AI_ENDPOINT}/translate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  }).then((response) => response.json());
-}
+export function translatePage({
+  title,
+  body,
+  sourceLanguage,
+  targetLanguage,
+}) {
+  return supabase.functions
+    .invoke("translate-page", {
+      body: {
+        title,
+        body,
+        sourceLanguage,
+        targetLanguage,
+      },
+    })
+    .then(({ data, error }) => {
+      if (error) {
+        throw error;
+      }
 
-export function transcribePageVoice(formData) {
-  return fetch(`${GOOGLE_AI_ENDPOINT}/transcribe`, {
-    method: "POST",
-    body: formData,
-  }).then((response) => response.json());
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      return data.translation;
+    });
 }

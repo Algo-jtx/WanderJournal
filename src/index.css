@@ -2719,3 +2719,80 @@ p {
   object-fit: cover;
   display: block;
 }
+
+/* ------------------------------------------------
+   GOOGLE AI — LANGUAGE BRIDGE
+   ------------------------------------------------ */
+
+.language-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.language-error {
+  margin-top: 1.2rem;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--personal-3);
+  background: var(--white);
+  font-size: 0.8rem;
+}
+
+.translation-result {
+  margin-top: 2.5rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--white);
+  border: 1px solid rgba(23, 21, 19, 0.16);
+  box-shadow: var(--shadow-small);
+}
+
+.translation-meta {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.translation-route {
+  opacity: 0.55;
+  letter-spacing: 0.16em;
+}
+
+.translation-result h3 {
+  max-width: 800px;
+  margin-top: 0.8rem;
+  font-size: clamp(2.5rem, 4vw, 4.2rem);
+}
+
+.translated-story {
+  max-width: 760px;
+  margin-top: 1.5rem;
+  font-size: 1.08rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.translation-context {
+  max-width: 620px;
+  margin-top: 2rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--theme-2);
+  transform: rotate(-0.7deg);
+}
+
+.translation-context > p:last-child {
+  margin-top: 0.6rem;
+  line-height: 1.6;
+}
+
+.translation-original-note {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(23, 21, 19, 0.14);
+  color: var(--muted-ink);
+  font-size: 0.68rem;
+}

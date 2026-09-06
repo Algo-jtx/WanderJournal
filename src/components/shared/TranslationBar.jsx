@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { translatePage } from "../../services/googleAI";
 
 const languages = [
   "English",
@@ -9,35 +10,51 @@ const languages = [
   "Japanese",
   "Korean",
   "Vietnamese",
+  "Arabic",
+  "Hindi",
 ];
 
 function TranslationBar({ page }) {
   const [targetLanguage, setTargetLanguage] = useState("English");
-  const [message, setMessage] = useState("");
+  const [translation, setTranslation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   function handleLanguageChange(event) {
     setTargetLanguage(event.target.value);
+    setError("");
   }
 
   function handleTranslate() {
-    setMessage(
-      `Google AI will translate this page into ${targetLanguage}.`
-    );
+    setLoading(true);
+    setError("");
+    setTranslation(null);
+
+    translatePage({
+      title: page.title || "",
+      body: page.text || "",
+      sourceLanguage: page.originalLanguage || "",
+      targetLanguage,
+    })
+      .then((result) => {
+        setTranslation(result);
+      })
+      .catch((err) => {
+        console.error("Translation failed:", err);
+
+        setError(
+          err.message ||
+            "This page could not cross the language barrier right now."
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
-  function handleTranscript() {
-    if (!page.voice) {
-      setMessage("This page does not contain a voice note.");
-      return;
-    }
-
-    setMessage("Google AI will transcribe the original voice note.");
-  }
-
-  function handleTranslatedVoice() {
-    setMessage(
-      `ElevenLabs will optionally speak the ${targetLanguage} translation.`
-    );
+  function handleShowOriginal() {
+    setTranslation(null);
+    setError("");
   }
 
   return (
@@ -45,26 +62,32 @@ function TranslationBar({ page }) {
       <div className="language-tools-heading">
         <div>
           <p className="eyebrow">Understand this page</p>
+
           <p className="language-tools-description">
             Stories should be able to travel further than language.
           </p>
         </div>
 
         <p className="annotation">
-          read it your way ↗
+          language shouldn't
+          <br />
+          be the border ↗
         </p>
       </div>
 
       <div className="language-controls">
         <label className="language-select-wrap">
-          <span>Translate to</span>
+          <span>Read in</span>
 
           <select
             value={targetLanguage}
             onChange={handleLanguageChange}
           >
             {languages.map((language) => (
-              <option value={language} key={language}>
+              <option
+                value={language}
+                key={language}
+              >
                 {language}
               </option>
             ))}
@@ -75,33 +98,74 @@ function TranslationBar({ page }) {
           type="button"
           className="language-button"
           onClick={handleTranslate}
+          disabled={loading}
         >
-          Translate page
+          {loading
+            ? "Crossing languages..."
+            : "Translate with Google AI"}
         </button>
 
-        {page.voice && (
+        {translation && (
           <button
             type="button"
             className="language-button"
-            onClick={handleTranscript}
+            onClick={handleShowOriginal}
           >
-            Transcribe voice
+            Show original
           </button>
         )}
-
-        <button
-          type="button"
-          className="language-button"
-          onClick={handleTranslatedVoice}
-        >
-          Hear translation
-        </button>
       </div>
 
-      {message && (
-        <p className="language-status">
-          {message}
+      {error && (
+        <p className="language-error">
+          {error}
         </p>
+      )}
+
+      {translation && (
+        <div className="translation-result">
+          <div className="translation-meta">
+            <span>
+              {translation.sourceLanguage || "Original"}
+            </span>
+
+            <span className="translation-route">
+              · · · · · →
+            </span>
+
+            <span>
+              {translation.targetLanguage || targetLanguage}
+            </span>
+          </div>
+
+          <p className="eyebrow">
+            Google AI translation
+          </p>
+
+          <h3>
+            {translation.translatedTitle}
+          </h3>
+
+          <p className="translated-story">
+            {translation.translatedBody}
+          </p>
+
+          {translation.contextNote && (
+            <aside className="translation-context">
+              <p className="eyebrow">
+                A little context
+              </p>
+
+              <p>
+                {translation.contextNote}
+              </p>
+            </aside>
+          )}
+
+          <p className="translation-original-note">
+            The contributor's original page remains unchanged.
+          </p>
+        </div>
       )}
     </section>
   );
